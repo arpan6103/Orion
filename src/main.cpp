@@ -2,32 +2,25 @@
 #include "../include/orbit.h"
 
 int main() {
-    // Earth's orbit around the Sun (approximately)
-    orion::KeplerianElements earth {
-        .a     = 1.496e8,      // 1 AU in km
-        .e     = 0.0167,       // nearly circular
-        .i     = 0.0,          // reference plane
-        .raan  = 0.0,
-        .omega = 1.7966,       // ~102.9 degrees
-        .nu    = 0.0           // at perihelion
-    };
+    orion::KeplerianElements test {
+    .a     = 1.0e8,
+    .e     = 0.3,
+    .i     = 0.5,     // ~28.6 degrees - nonzero, this is the key
+    .raan  = 0.8,
+    .omega = 1.2,
+    .nu    = 0.6
+};
 
-    auto sv = orion::keplerian_to_state(earth);
+auto sv2 = orion::keplerian_to_state(test);
+auto back = orion::state_to_keplerian(sv2);
 
-    std::cout << "Earth position (km):\n";
-    std::cout << "  x = " << sv.r.x << "\n";
-    std::cout << "  y = " << sv.r.y << "\n";
-    std::cout << "  z = " << sv.r.z << "\n";
-
-    std::cout << "Earth velocity (km/s):\n";
-    std::cout << "  vx = " << sv.v.x << "\n";
-    std::cout << "  vy = " << sv.v.y << "\n";
-    std::cout << "  vz = " << sv.v.z << "\n";
-
-    // Sanity check: orbital speed should be ~29.8 km/s
-    std::cout << "\n|v| = " << sv.v.norm() << " km/s (expect ~29.8)\n";
-    // Distance should be ~perihelion = a*(1-e) = 1.471e8 km
-    std::cout << "|r| = " << sv.r.norm() << " km (expect ~1.471e8)\n";
+std::cout << "\nRound trip test (i != 0):\n";
+std::cout << "  a:     " << back.a     << " (expect 1.0e8)\n";
+std::cout << "  e:     " << back.e     << " (expect 0.3)\n";
+std::cout << "  i:     " << back.i     << " (expect 0.5)\n";
+std::cout << "  raan:  " << back.raan  << " (expect 0.8)\n";
+std::cout << "  omega: " << back.omega << " (expect 1.2)\n";
+std::cout << "  nu:    " << back.nu    << " (expect 0.6)\n";
 
     return 0;
 }

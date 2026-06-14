@@ -14,7 +14,7 @@ namespace orion{
         double dot(const Vec3& o) const {return x*o.x+y*o.y+z*o.z;}
         Vec3 cross(const Vec3& o)const {
             return {y*o.z-z*o.y,
-                    z*o.x-y*o.x,
+                    z*o.x-x*o.z,
                     x*o.y-y*o.x
             };
         }
@@ -40,4 +40,6 @@ namespace orion{
     };
 
     StateVector keplerian_to_state(const KeplerianElements& k,double mu=MU_SUN);
+
+    KeplerianElements state_to_keplerian(const StateVector& sv,double mu=MU_SUN);
 }
