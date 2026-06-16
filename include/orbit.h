@@ -42,4 +42,9 @@ namespace orion{
     StateVector keplerian_to_state(const KeplerianElements& k,double mu=MU_SUN);
 
     KeplerianElements state_to_keplerian(const StateVector& sv,double mu=MU_SUN);
+
+    double solve_kepler(double M,double e, double tol=1e-10, int max_iter=100);
+    double mean_anomaly_to_nu(double M, double e);
+    double compute_mean_anomaly(double t,double t0, double a, double mu=MU_SUN);
+    StateVector propagate(const KeplerianElements& k, double t, double t0=0.0, double mu=MU_SUN);
 }

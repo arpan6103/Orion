@@ -2,25 +2,44 @@
 #include "../include/orbit.h"
 
 int main() {
-    orion::KeplerianElements test {
-    .a     = 1.0e8,
-    .e     = 0.3,
-    .i     = 0.5,     // ~28.6 degrees - nonzero, this is the key
-    .raan  = 0.8,
-    .omega = 1.2,
-    .nu    = 0.6
+    // Earth's orbital elements (nu=0 means we start at periapsis, t0=0)
+orion::KeplerianElements earth {
+    .a     = 1.496e8,
+    .e     = 0.0167,
+    .i     = 0.0,
+    .raan  = 0.0,
+    .omega = 1.7966,
+    .nu    = 0.0
 };
 
-auto sv2 = orion::keplerian_to_state(test);
-auto back = orion::state_to_keplerian(sv2);
+orion::KeplerianElements mars {
+    .a     = 2.279e8,    // km (1.524 AU)
+    .e     = 0.0934,
+    .i     = 0.03229,    // radians (~1.85 degrees)
+    .raan  = 0.8650,     // radians
+    .omega = 5.0004,     // radians
+    .nu    = 0.0         // arbitrary start
+};
 
-std::cout << "\nRound trip test (i != 0):\n";
-std::cout << "  a:     " << back.a     << " (expect 1.0e8)\n";
-std::cout << "  e:     " << back.e     << " (expect 0.3)\n";
-std::cout << "  i:     " << back.i     << " (expect 0.5)\n";
-std::cout << "  raan:  " << back.raan  << " (expect 0.8)\n";
-std::cout << "  omega: " << back.omega << " (expect 1.2)\n";
-std::cout << "  nu:    " << back.nu    << " (expect 0.6)\n";
+double T = 365.25 * 24 * 3600; // one year in seconds
+
+// At t=0, should match keplerian_to_state directly
+auto sv0 = orion::propagate(earth, 0.0);
+std::cout << "At t=0:\n";
+std::cout << "  |r| = " << sv0.r.norm() << " km (expect 1.471e8)\n";
+std::cout << "  |v| = " << sv0.v.norm() << " km/s (expect 30.29)\n";
+
+// At t=T/2 (half orbit), Earth should be at aphelion
+auto sv1 = orion::propagate(earth, T/2);
+std::cout << "\nAt t=T/2 (aphelion):\n";
+std::cout << "  |r| = " << sv1.r.norm() << " km (expect 1.521e8)\n";
+std::cout << "  |v| = " << sv1.v.norm() << " km/s (expect ~29.3)\n";
+
+// At t=T (full orbit), should be back near periapsis
+auto sv2 = orion::propagate(earth, T);
+std::cout << "\nAt t=T (full orbit):\n";
+std::cout << "  |r| = " << sv2.r.norm() << " km (expect ~1.471e8)\n";
+std::cout << "  |v| = " << sv2.v.norm() << " km/s (expect ~30.29)\n";
 
     return 0;
 }

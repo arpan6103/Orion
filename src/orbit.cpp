@@ -56,4 +56,46 @@ namespace orion{
 
         return {a,e,i,raan,omega,nu};
     }
+
+    double solve_kepler(double M, double e, double tol, int max_iter){
+        M=std::fmod(M,2*M_PI);
+        if(M<0){
+            M+=2*M_PI;
+        }
+        double E=M;
+        for(int i=0;i<max_iter;i++){
+            double f=E-e*std::sin(E)-M;
+            double fp=1.0-e*std::cos(E);
+            double dE=-f/fp;
+            E+=dE;
+            if(std::abs(dE)<tol) break;
+        }
+        return E;
+    }
+
+    double mean_anomaly_to_nu(double M, double e){
+        double E=solve_kepler(M,e);
+        double nu = 2.0 * std::atan2(
+            std::sqrt(1+e) * std::sin(E/2),
+            std::sqrt(1-e) * std::cos(E/2)
+        );
+        if(nu<0){
+            nu+=2*M_PI;
+        }
+        return nu;
+    }
+
+    double compute_mean_anomaly(double t,double t0,double a,double mu){
+        double n=std::sqrt(mu/(a*a*a));
+        return n*(t-t0);
+    }
+
+    StateVector propagate(const KeplerianElements& k, double t, double t0, double mu){
+        double M=compute_mean_anomaly(t,t0,k.a,mu);
+        double nu=mean_anomaly_to_nu(M,k.e);
+        KeplerianElements k_at_t=k;
+        k_at_t.nu=nu;
+
+        return keplerian_to_state(k_at_t,mu);
+    }
 }
