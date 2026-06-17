@@ -39,9 +39,17 @@ namespace orion{
         double nu;
     };
 
+    struct LambertResult{
+        Vec3 v1;
+        Vec3 v2;
+        bool converged;
+    };
+
     StateVector keplerian_to_state(const KeplerianElements& k,double mu=MU_SUN);
 
     KeplerianElements state_to_keplerian(const StateVector& sv,double mu=MU_SUN);
+
+    LambertResult lambert(const Vec3& r1, const Vec3& r2, double dt, double mu=MU_SUN, bool prograde=true);
 
     double solve_kepler(double M,double e, double tol=1e-10, int max_iter=100);
     double mean_anomaly_to_nu(double M, double e);

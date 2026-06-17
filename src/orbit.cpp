@@ -1,4 +1,6 @@
 #include "../include/orbit.h"
+#include<iostream>
+#include <algorithm>
 
 namespace orion{
     StateVector keplerian_to_state(const KeplerianElements& k,double mu){
@@ -97,5 +99,97 @@ namespace orion{
         k_at_t.nu=nu;
 
         return keplerian_to_state(k_at_t,mu);
+    }
+
+    LambertResult lambert(const Vec3& r1,const Vec3& r2, double dt, double mu, bool prograde){
+        LambertResult result;
+        result.converged=false;
+
+        //step1 geometry consts
+        double r1_mag=r1.norm();
+        double r2_mag=r2.norm();
+
+        Vec3 r12=r2-r1;
+        double c=r12.norm();            // chord
+        double s=(r1_mag+r2_mag+c)/2.0; // semi perimeter
+
+        Vec3 r1xr2=r1.cross(r2);
+        double sin_dnu = std::sqrt(1.0 - std::pow(r1.dot(r2)/(r1_mag*r2_mag), 2));
+        if (prograde ? (r1xr2.z < 0) : (r1xr2.z >= 0)) sin_dnu = -sin_dnu;
+
+        double lam2=1.0-c/s;
+        double lambda=std::sqrt(lam2);
+        if (sin_dnu<0) lambda=-lambda;
+
+        double rho=(r1_mag-r2_mag)/c;
+        double sigma=std::sqrt(1.0-rho*rho);
+        double gamma=std::sqrt(mu*s/2.0);
+
+        double T_target=dt*std::sqrt(2.0*mu/(s*s*s));
+
+        //step2 initial guess for x
+        double beta_0=2.0*std::asin(std::sqrt(lam2));
+        if(lambda<0) beta_0=-beta_0;
+
+        double T0=(std::acos(lambda)+lambda*std::sqrt(1.0-lam2));
+        double x=(T_target>T0) ? 0.0 : 0.5;
+
+        //step3 Newton-Raphson
+        for(int iter=0;iter<50;iter++){
+            x=std::max(-0.99,std::min(0.99,x));
+
+            double y_ = std::sqrt(1.0 - lam2*(1.0 - x*x));
+
+            // psi must be in [0, pi] for elliptic transfers
+            double psi;
+            if (x < 1.0) {
+                // elliptic
+                psi = std::acos(x*y_ + lambda*(1.0 - x*x));
+            } else {
+                psi = 0.0; // hyperbolic not needed for Earth-Mars
+            }
+
+            double T_x = (psi/std::sqrt(1.0 - x*x) - x + lambda*y_) / (1.0 - x*x);
+            double dT  = (3.0*x*T_x - 2.0*(1.0 - lambda*x/y_*(1.0-x*x) - lambda*y_)) / (1.0 - x*x);
+
+            double err=T_x-T_target;
+            if(std::abs(err)<1e-10){
+                result.converged=true;
+                break;
+            }
+            if(std::abs(dT)<1e-15) break;
+            x-=err/dT;
+            // at the end of the loop body, before the closing brace
+            if (iter == 49) std::cout << "  [hit max iters, final err=" << (T_x - T_target) << "]\n";
+        }
+
+        //step4 recover velocities from x
+        double y = std::sqrt(1.0 - lam2*(1.0 - x*x));
+
+        double gamma_v = std::sqrt(mu * s / 2.0);
+        double rho_v   = (r1_mag - r2_mag) / c;
+        double sigma_v = std::sqrt(1.0 - rho_v*rho_v);
+
+        // Radial and tangential velocity components
+        double vr1 =  gamma_v * ((lambda*y - x) - rho_v*(lambda*y + x)) / r1_mag;
+        double vr2 = -gamma_v * ((lambda*y - x) + rho_v*(lambda*y + x)) / r2_mag;
+        double vt1 =  gamma_v * sigma_v * (y + lambda*x) / r1_mag;
+        double vt2 =  gamma_v * sigma_v * (y + lambda*x) / r2_mag;
+
+        // Unit vectors: radial, and tangential built from unit normal
+        Vec3 ir1 = r1 * (1.0/r1_mag);
+        Vec3 ir2 = r2 * (1.0/r2_mag);
+
+        Vec3 ih = r1.cross(r2);
+        ih = ih * (1.0/ih.norm());
+        if (lambda < 0) ih = ih * -1.0;   // flip normal for retrograde
+
+        Vec3 it1 = ih.cross(ir1);
+        Vec3 it2 = ih.cross(ir2);
+
+        result.v1 = ir1*vr1 + it1*vt1;
+        result.v2 = ir2*vr2 + it2*vt2;
+
+        return result;
     }
 }
