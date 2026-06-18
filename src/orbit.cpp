@@ -159,8 +159,6 @@ namespace orion{
             }
             if(std::abs(dT)<1e-15) break;
             x-=err/dT;
-            // at the end of the loop body, before the closing brace
-            if (iter == 49) std::cout << "  [hit max iters, final err=" << (T_x - T_target) << "]\n";
         }
 
         //step4 recover velocities from x
